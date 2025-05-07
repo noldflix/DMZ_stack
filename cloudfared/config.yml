@@ -1,11 +1,11 @@
 # Cloudflared tunnel configuration
 
 # Replace with your actual tunnel ID (shown after running `cloudflared tunnel create`)
-tunnel: <YOUR_TUNNEL_ID>
+tunnel: 98d44830-c7b8-4589-b950-fcf9e185f0bf
 
 # Path to the credentials file created by `cloudflared tunnel login`
 # (This file must exist inside the container at runtime)
-credentials-file: /etc/cloudflared/<YOUR_TUNNEL_ID>.json
+credentials-file: /etc/cloudflared/98d44830-c7b8-4589-b950-fcf9e185f0bf.json
 
 ingress:
   # Main public service exposed through this tunnel
