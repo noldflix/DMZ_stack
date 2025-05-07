@@ -1,0 +1,19 @@
+# Cloudflared tunnel configuration
+
+# Replace with your actual tunnel ID (shown after running `cloudflared tunnel create`)
+tunnel: <YOUR_TUNNEL_ID>
+
+# Path to the credentials file created by `cloudflared tunnel login`
+# (This file must exist inside the container at runtime)
+credentials-file: /etc/cloudflared/<YOUR_TUNNEL_ID>.json
+
+ingress:
+  # Main public service exposed through this tunnel
+  - hostname: overseerr.noldflix.co.uk
+    service: https://traefik:443  # Traefik routes to the real container
+    originRequest:
+      noTLSVerify: true  # TLS is handled internally by Traefik with Let's Encrypt
+
+  # Default catch-all fallback
+  - service: http_status:404
+  # This will return a 404 for any unmatched requests

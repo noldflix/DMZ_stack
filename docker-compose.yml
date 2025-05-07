@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    volumes:
+      - ./cloudflared:/etc/cloudflared
+    networks:
+      - proxy
+
+  traefik:
+    image: traefik:v2.10
+    container_name: traefik
+    depends_on:
+      - cloudflared
+    restart: unless-stopped
+    command:
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.cloudflare.acme.email=${CLOUDFLARE_EMAIL}    # 👈 Set in .env
+      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
+    environment:
+      - CF_API_EMAIL=${CLOUDFLARE_EMAIL}       # 👈 Set in .env
+      - CF_API_KEY=${CLOUDFLARE_API_KEY}       # 👈 Set in .env (Global API Key)
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml
+      - traefik-acme:/letsencrypt
+    networks:
+      - proxy
+
+  overseerr:
+    image: sctx/overseerr
+    container_name: overseerr
+    depends_on:
+      - cloudflared
+      - traefik
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=info
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.overseerr.rule=Host(`overseerr.noldflix.co.uk`)"  # 👈 Replace domain
+      - "traefik.http.routers.overseerr.entrypoints=websecure"
+      - "traefik.http.routers.overseerr.tls.certresolver=cloudflare"
+      - "traefik.http.services.overseerr.loadbalancer.server.port=5055"
+    volumes:
+      - overseerr-config:/app/config
+    networks:
+      - proxy
+
+
+volumes:
+  overseerr-config:
+  traefik-acme:
+
+networks:
+  proxy:
