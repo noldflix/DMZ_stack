@@ -4,7 +4,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
     restart: unless-stopped
-    command: tunnel run
+    command: tunnel run stark-dmz
     volumes:
       - ./cloudflared:/etc/cloudflared
     networks:
@@ -16,18 +16,13 @@ services:
     depends_on:
       - cloudflared
     restart: unless-stopped
-    command:
-      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
-      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
-      - --certificatesresolvers.cloudflare.acme.email=${CLOUDFLARE_EMAIL}    # 👈 Set in .env
-      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
     environment:
       - CF_API_EMAIL=${CLOUDFLARE_EMAIL}       # 👈 Set in .env
       - CF_API_KEY=${CLOUDFLARE_API_KEY}       # 👈 Set in .env (Global API Key)
     volumes:
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml
-      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml
       - traefik-acme:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - proxy
 
@@ -47,7 +42,47 @@ services:
       - "traefik.http.routers.overseerr.tls.certresolver=cloudflare"
       - "traefik.http.services.overseerr.loadbalancer.server.port=5055"
     volumes:
-      - overseerr-config:/app/config
+      - ./overseerr/config:/app/config
+    networks:
+      - proxy
+  wizarr:
+    image: ghcr.io/wizarrrr/wizarr
+    container_name: wizarr
+    environment:
+      - PUID=1000  # dmz-user's user ID
+      - PGID=1000  # dmz-user's group ID
+      - TZ=Europe/London  # Set to your timezone
+    volumes:
+      - ./wizarr/config:/data/database  # Path to store Wizarr configuration
+    restart: unless-stopped
+    networks:
+      - proxy  # Ensure this matches your existing network name
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wizarr.rule=Host(`wizarr.noldflix.co.uk`)"
+      - "traefik.http.routers.wizarr.entrypoints=websecure"  # Ensure this matches your existing entrypoint
+      - "traefik.http.routers.wizarr.tls=true"
+      - "traefik.http.services.wizarr.loadbalancer.server.port=5690"  # Wizarr's default port
+
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf
+    container_name: audiobookshelf
+    depends_on:
+      - traefik
+    environment:
+      - PUID=1000        # dmz-user UID
+      - PGID=1000        # dmz-user GID
+      - TZ=Europe/London
+    volumes:
+      - /srv/audiobooks:/audiobooks            # Audiobook media
+      - ./audiobookshelf/config:/config        # App config
+      - ./audiobookshelf/metadata:/metadata    # Metadata, progress, etc.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.audiobookshelf.rule=Host(`audiobookshelf.noldflix.co.uk`)"  # < change domain if needed
+      - "traefik.http.routers.audiobookshelf.entrypoints=websecure"
+      - "traefik.http.routers.audiobookshelf.tls.certresolver=cloudflare"
+      - "traefik.http.services.audiobookshelf.loadbalancer.server.port=80"
     networks:
       - proxy
 
@@ -55,6 +90,7 @@ services:
 volumes:
   overseerr-config:
   traefik-acme:
+  wizarr-config:
 
 networks:
   proxy:

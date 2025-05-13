@@ -13,6 +13,14 @@ ingress:
     service: https://traefik:443  # Traefik routes to the real container
     originRequest:
       noTLSVerify: true  # TLS is handled internally by Traefik with Let's Encrypt
+  - hostname: wizarr.noldflix.co.uk
+    service: https://traefik:443
+    originRequest:
+      noTLSVerify: true
+  - hostname: audiobookshelf.noldflix.co.uk
+    service: https://traefik:443  # Traefik routes to the real container
+    originRequest:
+      noTLSVerify: true  # TLS is handled internally by Traefik with Let's Encrypt
 
   # Default catch-all fallback
   - service: http_status:404
