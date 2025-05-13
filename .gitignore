@@ -1,0 +1,28 @@
+# Sensitive
+.env
+cloudflared/*.json
+
+# System
+*.DS_Store
+*.log
+
+# Optional
+letsencrypt/
+
+# Docker artifacts
+*.pid
+*.sock
+
+# Docker volumes (if bind-mounting)
+audiobookshelf/
+overseerr/
+wizarr/
+configs/
+
+# Editor/IDE
+.vscode/
+*.swp
+*.swo
+
+# Python virtual environments (if applicable)
+venv/
